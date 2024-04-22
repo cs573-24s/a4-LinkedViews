@@ -100,6 +100,21 @@
             .call(d3.axisLeft(y_scale));
           svg.append("g")
             .call(d3.axisBottom(x_scale));
+          // x axis
+          svg.append("text")
+            .attr("y", height)
+            .attr("x", 0  + width/2)
+            .attr("dy", "1em")
+            .style("text-anchor", "middle")
+            .text(x_var);
+          // y axis
+          svg.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 0)
+            .attr("x", 0 - (height / 2))
+            .attr("dy", "1em")
+            .style("text-anchor", "middle")
+            .text(y_var);
 
           // BAR CHART CODE
           const svg2 = d3.select("#scatterplot")
@@ -196,7 +211,14 @@
             .style("text-anchor", "middle")
             .style("font-size", 25)
             .style("fill", "black")
+          svg.append("text")
+            .attr("y", 130)
+            .attr("x", 0)
+            .attr("dy", "1em")
+            .style("text-anchor", "middle")
+            .text("Gender");
         }
+        
 
         // SLIDER CODE (constant)
         const slider = document.getElementById("timeSlider");
