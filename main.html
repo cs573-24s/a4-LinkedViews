@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D3.js Time Slider and Scatterplot</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        .slider {
+            width: 80%;
+            margin: 0 auto;
+        }
+        .timeLabel {
+          vertical-align: top;
+        }
+        .bar-label {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            fill: black;
+            text-anchor: middle;
+        }
+    </style>
+</head>
+<body>
+    It the penglings
+    <div class="slider">
+      <span id="startTimeLabel" class="timeLabel"></span>
+      <input type="range" min="0" max="100" value="0" class="slider" id="timeSlider">
+      <span id="endTimeLabel" class="timeLabel"></span>
+
+    </div>
+    <div id="scatterplot"></div>
+    <div id="piechart"></div>
+
+    <script>
+      d3.csv("./penglings.csv").then(function (data) {
+        const div = d3.select(".tooltip")
+                .style("opacity", 0);
+        const margin = { top: 20, right: 20, bottom: 30, left: 40 };
+        const width = 600 - margin.left - margin.right;
+        const height = 400 - margin.top - margin.bottom;
+        let x_var = "bill_length_mm";
+        let y_var = "body_mass_g";
+        let filtered_data = data
+        let min_x, max_x, min_y, max_y;
+        let min_year = d3.min(data, d => d['year']);
+        let max_year = d3.max(data, d => d['year']);
+        const startTimeLabel = document.getElementById("startTimeLabel");
+        const endTimeLabel = document.getElementById("endTimeLabel");
+        startTimeLabel.textContent = min_year;
+        endTimeLabel.textContent = max_year;
+        // Random data generation for scatter plot
+        // Initialize scatter plot
+        function initScatterplot(data) {
+
+      
+            // const dots = svg.selectAll("dots")
+            //     .data(data)
+            //     .enter().append("circle")
+            //     .attr("cx", d => x_scale(d[x_var]))
+            //     .attr("cy", d => y_scale(d[y_var]))
+            //     .attr("r", 10)
+            //     .attr("fill", "steelblue")
+            //     .attr("opacity", 0.8)
+        }
+
+        // Update scatter plot based on selected time
+        function updateScatterplot(data, time) {
+          // Filter data based on selected time
+          filtered_data = data.filter(function(d) {
+            return d[x_var] !== "NA" && d[y_var] !== "NA" && d['year'] == time && d.island !== "NA";
+          });
+          min_x = d3.min(filtered_data, d => d[x_var]);
+          max_x = d3.max(filtered_data, d => d[x_var]);
+          min_y = d3.min(filtered_data, d => d[y_var]);
+          max_y = d3.max(filtered_data, d => d[y_var]);
+          let x_scale = d3.scaleLinear().domain([min_x, max_x]).range([0, width]);
+          let y_scale = d3.scaleLinear().domain([min_y, max_y]).range([height, 0]);
+
+          // SCATTER PLOT CODE
+          // removing old version when time adjusts
+          d3.select("#scatterplot svg").remove(); 
+          d3.select("#scatterplot svg").remove(); 
+          //generaating scatterplot
+          let svg = d3.select("#scatterplot")
+                .append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+          svg.selectAll("dots")
+                .data(filtered_data)
+                .enter().append("circle")
+                .attr("cx", d => x_scale(d[x_var]))
+                .attr("cy", d => y_scale(d[y_var]))
+                .attr("r", 10)
+                .attr("fill", "steelblue")
+                .attr("opacity", 0.8)
+          svg.append("g")
+            .call(d3.axisLeft(y_scale));
+          svg.append("g")
+            .call(d3.axisBottom(x_scale));
+          // x axis
+          svg.append("text")
+            .attr("y", height)
+            .attr("x", 0  + width/2)
+            .attr("dy", "1em")
+            .style("text-anchor", "middle")
+            .text(x_var);
+          // y axis
+          svg.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 0)
+            .attr("x", 0 - (height / 2))
+            .attr("dy", "1em")
+            .style("text-anchor", "middle")
+            .text(y_var);
+
+          // BAR CHART CODE
+          const svg2 = d3.select("#scatterplot")
+              .append("svg")
+              .attr("width", width + margin.left + margin.right)
+              .attr("height", height + margin.top + margin.bottom)
+              .append("g")
+              .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+          // getting length and island and counting them
+          const islandCounts = d3.rollup(filtered_data, v => v.length, d => d.island);
+          const countsArray = Array.from(islandCounts, ([key, value]) => ({ island: key, count: value }));
+          countsArray.sort((a, b) => d3.ascending(a.island, b.island));
+          let x_bar_scale = d3.scaleBand()
+            .domain(countsArray.map(d => d.island))
+            .range([margin.left, width + margin.left])
+            .padding(0.1);
+          let y_bar_scale = d3.scaleLinear()
+            .domain([0, d3.max(countsArray, d => d.count)])
+            .nice()
+            .range([height, margin.top]);
+          svg2.selectAll("mybar")
+            .data(countsArray)
+            .enter()
+            .append("rect")
+              .attr("x",d => x_bar_scale(d.island))
+              .attr("y", d => y_bar_scale(d.count) )
+              .attr("width", x_bar_scale.bandwidth())
+              .attr("height", d => height - y_bar_scale(d.count))
+              .attr("fill", "#69b3a2")
+          svg2.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", 0)
+                .attr("x", 0 - (height / 2))
+                .attr("dy", "1em")
+                .style("text-anchor", "middle")
+                .text("Count");
+          svg2.append("text")
+            .attr("transform", `translate(${width / 2}, ${height + margin.top + 10})`)
+            .style("text-anchor", "middle")
+            .text("Island");
+          svg2.append("g")
+            .call(d3.axisLeft(y_bar_scale));
+          svg2.selectAll(".bar-label")
+                .data(countsArray)
+                .enter().append("text")
+                .attr("class", "bar-label")
+                .attr("x", d => x_bar_scale(d.island) + x_bar_scale.bandwidth() / 2)
+                .attr("y", d => height + 10) // Adjust position above the bar
+                .text(d => d.island);
+          
+          // PIE CHART CODE
+          // Count the instances of each sex
+          const sexCounts = d3.rollup(filtered_data, v => v.length, d => d.sex);
+          // generating counts and sorting alphabetically
+          const sexCountsArray = Array.from(sexCounts, ([key, value]) => ({ sex: key, count: value })).sort((a, b) => d3.ascending(a.sex, b.sex));
+
+          d3.select("#piechart svg").remove(); 
+          svg = d3.select("#piechart")
+            .append("svg")
+              .attr("width", width*2)
+              .attr("height", height)
+            .append("g")
+              .attr("transform", "translate(" + width + "," + height / 2 + ")");
+          // set the color scale
+          let color = d3.scaleOrdinal()
+            .domain(sexCountsArray)
+            .range(d3.schemeSet2);
+          // create initial pie variables
+          var pie = d3.pie()
+            .value(function(d) { return d.count; })
+          var data_ready = pie(data)
+          var radius = Math.min(width, height) / 2 - 10
+          // shape helper to build arcs:
+          var arcGenerator = d3.arc()
+            .innerRadius(0)
+            .outerRadius(radius)
+
+          // Building out pie chart and slices
+          slices = svg
+            .selectAll('mySlices')
+            .data(pie(sexCountsArray))
+            .enter()
+          slices.append('path')
+              .attr('d', arcGenerator)
+              .attr('fill', function(d){ return(color(d.data.sex)) })
+              // .attr("stroke", "black")
+              .style("stroke-width", "2px")
+              .style("opacity", 0.7)
+          // labels for text
+          slices
+            .append('text')
+            .text(function(d){ return d.data.sex})
+            .attr("transform", function(d) { return "translate(" + arcGenerator.centroid(d) + ")";  })
+            .style("text-anchor", "middle")
+            .style("font-size", 25)
+            .style("fill", "black")
+          svg.append("text")
+            .attr("y", 130)
+            .attr("x", 0)
+            .attr("dy", "1em")
+            .style("text-anchor", "middle")
+            .text("Gender");
+        }
+        
+
+        // SLIDER CODE (constant)
+        const slider = document.getElementById("timeSlider");
+        slider.min = min_year
+        slider.max = max_year
+        slider.addEventListener("input", function() {
+            const time = +this.value; // Get selected time
+            updateScatterplot(data, time); //update
+        });
+
+          // call funcs at start of program
+          initScatterplot(data);
+          updateScatterplot(data, min_year);
+        })
+    </script>
+</body>
+</html>
